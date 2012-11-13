@@ -16,3 +16,6 @@ OR
 3. Run mdeden every week or so usually on a wednesday or thursday and get any newly released manga
 
 Thanks to MangaEden for their great manga and for releasing an API which made this project much easier.
+
+0.0.1
+fixed bug in creating the cbr file

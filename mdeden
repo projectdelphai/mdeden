@@ -42,7 +42,7 @@ end
 
 def packagemanga(id,title,chapternumber)
 begin
-	puts `rar a "#{@options[:'downloaddir']}/#{title} #{chapternumber}.cbr" "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/*" 1> /dev/null `
+	puts `rar a -ep "#{@options[:'downloaddir']}/#{title} #{chapternumber}.cbr" "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/*" 1> /dev/null `
 	FileUtils.rm_r "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}"
 	puts "Create comics #{title} #{chapternumber}"
 rescue
@@ -84,8 +84,8 @@ def updatemanga(type)
 				Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}"
 				chapterinfo = MultiJson.load(latestchapter.body)
 				chapterinfo["images"].each { |image|
-					File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/#{title}.#{chapternumber}.#{image[0]}", "w") do |i|
-					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}.jpg" )
+					File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/#{title}.#{chapternumber}.#{image[0]}.jpg", "w") do |i|
+					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
 					end
 				}
 				db.execute "UPDATE manga SET Chapter=#{chapternumber} WHERE Name LIKE '%#{title}%'"

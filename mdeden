@@ -83,8 +83,9 @@ def updatemanga(type)
 			else
 				Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}"
 				chapterinfo = MultiJson.load(latestchapter.body)
-				chapterinfo["images"].each { |image|
-					File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/#{title}.#{chapternumber}.#{image[0]}.jpg", "w") do |i|
+				chapterinfo["images"].reverse.each { |image|
+					imagenumber = sprintf '%02d', image[0]
+				  	File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber}/#{title}.#{chapternumber}.#{imagenumber}.jpg", "w") do |i|
 					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
 					end
 				}

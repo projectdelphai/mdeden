@@ -17,5 +17,8 @@ OR
 
 Thanks to MangaEden for their great manga and for releasing an API which made this project much easier.
 
+0.0.2
+added multi-chapter updating
+
 0.0.1
 fixed bug in creating the cbr file

@@ -19,6 +19,8 @@ Thanks to MangaEden for their great manga and for releasing an API which made th
 
 0.0.2
 added multi-chapter updating
+added error checking for internet connection failure
+removes unfinished directory on error
 
 0.0.1
 fixed bug in creating the cbr file

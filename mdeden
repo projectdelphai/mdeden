@@ -59,6 +59,7 @@ def updatemanga(type)
 		db.execute "INSERT INTO manga(Name) Values ('#{x}')" if manga.size == 0 or manga.size == nil
 		
 		#get latest chapter info
+		begin
 		manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
 		id = nil
 		title = nil
@@ -69,6 +70,12 @@ def updatemanga(type)
 			else nil
 			end
 		}
+		rescue
+		  nil
+		  retry
+		end
+
+		begin
 		mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
 		manga = MultiJson.load(mangainfo.body)
 		chapternumber=[]
@@ -77,7 +84,12 @@ def updatemanga(type)
 		}
 		chapterid = manga["chapters"].first[3]
 		latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid}")
+		rescue
+		  nil
+		  retry
+		end
 		
+
 		#download if not up to date
 		uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{x}%'"
 		uptodate.each { |row|
@@ -85,6 +97,7 @@ def updatemanga(type)
 		  i=0
 		  chapternumber.each { |y|
 		    
+		    begin
 		    if row[2].nil?
 				Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
 				chapterinfo = MultiJson.load(latestchapter.body)
@@ -117,6 +130,14 @@ def updatemanga(type)
 				packagemanga(id,title,cn)
 				i+=1
 			end
+		    rescue
+		      if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
+			Fileutils.rm_r "#{Dirhome}/.mdeden/manga/#{title} #{chapternumber[i]}/"
+		      else
+			nil
+		      end
+		      retry
+		    end
 		    }
 		}
 	}

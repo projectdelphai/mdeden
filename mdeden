@@ -51,12 +51,14 @@ end
 end
 
 def updatemanga(type)
+if type == "update"
 	db = SQLite3::Database.new "#{Dir.home}/.mdeden/manga.db"
 	db.execute "CREATE TABLE IF NOT EXISTS manga(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Chapter INT)"
-	
+
 	@options[:"manga"].each { |x|
-		manga = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{x}%'"
-		db.execute "INSERT INTO manga(Name) Values ('#{x}')" if manga.size == 0 or manga.size == nil
+	  z = x.gsub("'", "''")
+	  manga = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
+	  db.execute "INSERT INTO manga(Name) Values('#{z}')" if manga.size == 0 or manga.size == nil
 		
 		#get latest chapter info
 		begin
@@ -84,14 +86,11 @@ def updatemanga(type)
 		}
 		chapterid = manga["chapters"].first[3]
 		latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid}")
-		rescue
-		  nil
-		  retry
 		end
 		
 
 		#download if not up to date
-		uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{x}%'"
+		uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
 		uptodate.each { |row|
 		  sleep 5
 		  i=0
@@ -107,7 +106,7 @@ def updatemanga(type)
 					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
 					end
 				}
-				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{title}%'"
+				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 				cn = chapternumber[i]
 				packagemanga(id,title,cn)
 				i+=1
@@ -125,7 +124,7 @@ def updatemanga(type)
 					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
 					end
 				}
-				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{title}%'"
+				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 				cn = chapternumber[i]
 				packagemanga(id,title,cn)
 				i+=1
@@ -141,6 +140,76 @@ def updatemanga(type)
 		    }
 		}
 	}
+elsif type == "download"
+	q=ask("What manga do you want to download?")
+	
+	#get latest chapter info
+	begin
+		manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
+		id = nil
+		title = nil
+		alis = nil
+		manga["manga"].each { |value|
+		 	if value.has_value? "#{q}"
+				id = value["i"]
+				title = value["t"] 
+				alis = value["a"]
+			else 
+				nil
+			end
+		}
+	rescue
+	retry
+	end
+	
+	begin
+		mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
+		manga = MultiJson.load(mangainfo.body)
+		chapternumber=[]
+	    manga["chapters"].each { |x|
+			chapternumber.push x[0]
+		}
+		chapterid=[]
+		i=0
+		chapternumber.each { |x|
+			chapterid.push manga["chapters"][i][3]
+			i+=1
+		}
+		
+	end
+	chapternumber = chapternumber.sort
+	chapterid = chapterid.reverse
+
+	puts chapternumber.size
+	puts chapterid.size
+	puts chapternumber[221]
+	puts chapterid[221]
+
+	exit 0
+
+	#download if not up to date
+	i=0
+	  chapternumber.each { |y|
+	  
+		latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid[i]}")
+	    
+	    begin
+			Dir.mkdir "#{Dir.home}/.mdeden/manga/#{q}/#{title} #{chapternumber[i]}"
+			chapterinfo = MultiJson.load(latestchapter.body)
+			chapterinfo["images"].reverse.each { |image|
+				imagenumber = sprintf '%02d', image[0]
+			  	File.open( "#{Dir.home}/.mdeden/manga/#{q}/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
+				i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+				end
+			}
+	    rescue
+	      nil
+	    end
+			cn = chapternumber[i]
+			packagemanga(id,title,cn)
+			i+=1
+	    }
+end
 end
 
 def start
@@ -153,6 +222,10 @@ choose { |menu|
 		type = "update"
 		updatemanga(type)
 	}
+	#menu.choice("Get All Manga") {
+	#	type = "download"
+	#	updatemanga(type)
+	#}
 }
 end
 

@@ -9,42 +9,33 @@ require 'multi_json'
 
 def intro
 @options = {
-	:downloaddir => "/home/projectdelphai/.mdeden/manga",
+	:downloaddir => File.join(ENV['HOME'],'/.mdeden/manga'),
 	:manga => ["Bleach", "Fairy Tail", "Annarasumanara"]	
 }
-
+#check if .mdeden folder exists, if manga folder exists, and if yml file exists (which if it doesn't, creates it and populates it with default values)
 @yml = File.join(ENV['HOME'],'/.mdeden/mdeden.yml')
-if File.directory?("#{Dir.home}/.mdeden/")
-	nil
-else
-	Dir.mkdir("#{Dir.home}/.mdeden/", 0700)
-	if FIle.directory?("#{Dir.home}/.mdeden/manga/")
-	nil
-	else
-	Dir.mkdir("#{Dir.home}/.mdeden/manga", 0700)
-	end
-end
+Dir.mkdir("#{Dir.home}/.mdeden/", 0700) unless File.directory?("#{Dir.home}/.mdeden/")
+Dir.mkdir("#{Dir.home}/.mdeden/manga", 0700) unless File.directory?("#{Dir.home}/.mdeden/manga/") == false
 
 if File.exists? "#{Dir.home}/.mdeden/mdeden.yml"
-	config_options = YAML::load_file(@yml)
-	@options.merge!(config_options)
+  config_options = YAML::load_file(@yml)
+  @options.merge!(config_options)
 else
-	File.open(@yml, 'w') { |file| YAML::dump(@options,file) }
-	STDERR.puts "Initialized config file in #{@yml}, please update with correct information and restart."
-	exit 0;
+  File.open(@yml, 'w') { |file| YAML::dump(@options,file) }
+  STDERR.puts "Initialized config file in #{@yml}, please update with correct information and restart."
+  exit 0;
 end
-end
-
-def refreshmanga
-	response = HTTParty.get("http://www.mangaeden.com/api/list/0")
-	File.open("#{Dir.home}/.mdeden/mangalist.txt", 'w') {|f| f.write(response.body) }
+#refreshes mangalist for updated information
+response = HTTParty.get("http://www.mangaeden.com/api/list/0")
+File.open("#{Dir.home}/.mdeden/mangalist.txt", 'w') {|f| f.write(response.body) }
 end
 
 def packagemanga(id,title,cn)
+#packages folder of files and removes old folder
 begin
 	puts `rar a -ep "#{@options[:'downloaddir']}/#{title} #{cn}.cbr" "#{Dir.home}/.mdeden/manga/#{title} #{cn}/*" 1> /dev/null `
 	FileUtils.rm_r "#{Dir.home}/.mdeden/manga/#{title} #{cn}"
-	puts "Create comics #{title} #{cn}"
+	puts "Created comic #{title} #{cn}"
 rescue
 puts "Failed to create comic #{title}"
 end
@@ -52,182 +43,98 @@ end
 
 def updatemanga(type)
 if type == "update"
-	db = SQLite3::Database.new "#{Dir.home}/.mdeden/manga.db"
-	db.execute "CREATE TABLE IF NOT EXISTS manga(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Chapter INT)"
-
-	@options[:"manga"].each { |x|
-	  z = x.gsub("'", "''")
-	  manga = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
-	  db.execute "INSERT INTO manga(Name) Values('#{z}')" if manga.size == 0 or manga.size == nil
-		
-		#get latest chapter info
-		begin
-		manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
-		id = nil
-		title = nil
-		manga["manga"].each { |value|
-			if value.has_value? "#{x}"
-			id = value["i"]
-			title = value["t"] 
-			else nil
-			end
-		}
-		rescue
-		  nil
-		  retry
-		end
-
-		begin
-		mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
-		manga = MultiJson.load(mangainfo.body)
-		chapternumber=[]
-	        manga["chapters"].each { |x|
-		  chapternumber.push x[0]
-		}
-		chapterid = manga["chapters"].first[3]
-		latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid}")
-		end
-		
-
-		#download if not up to date
-		uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
-		uptodate.each { |row|
-		  sleep 5
-		  i=0
-		  chapternumber.each { |y|
-		    
-		    begin
-		    if row[2].nil?
-				Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
-				chapterinfo = MultiJson.load(latestchapter.body)
-				chapterinfo["images"].reverse.each { |image|
-					imagenumber = sprintf '%02d', image[0]
-					File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
-					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-					end
-				}
-				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
-				cn = chapternumber[i]
-				packagemanga(id,title,cn)
-				i+=1
-				break
-	  	    elsif row[2] >= chapternumber[i] or row[2] == chapternumber[i]
-	  	    
-				puts "#{title} up to date"
-				break	
-		    else
-				Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
-				chapterinfo = MultiJson.load(latestchapter.body)
-				chapterinfo["images"].reverse.each { |image|
-					imagenumber = sprintf '%02d', image[0]
-				  	File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
-					i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-					end
-				}
-				db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
-				cn = chapternumber[i]
-				packagemanga(id,title,cn)
-				i+=1
-			end
-		    rescue
-		      if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
-			Fileutils.rm_r "#{Dirhome}/.mdeden/manga/#{title} #{chapternumber[i]}/"
-		      else
-			nil
-		      end
-		      retry
-		    end
-		    }
-		}
-	}
-elsif type == "download"
-	q=ask("What manga do you want to download?")
-	
-	#get latest chapter info
-	begin
-		manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
-		id = nil
-		title = nil
-		alis = nil
-		manga["manga"].each { |value|
-		 	if value.has_value? "#{q}"
-				id = value["i"]
-				title = value["t"] 
-				alis = value["a"]
-			else 
-				nil
-			end
-		}
-	rescue
-	retry
-	end
+  db = SQLite3::Database.new "#{Dir.home}/.mdeden/manga.db"
+  db.execute "CREATE TABLE IF NOT EXISTS manga(ID INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT, Chapter INT)"
+  
+  @options[:"manga"].each { |x|
+    z = x.gsub("'", "''")
+    manga = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
+    db.execute "INSERT INTO manga(Name) Values('#{z}')" if manga.size == 0 or manga.size == nil
+    
+    #get latest chapter info
+    manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
+    id = nil
+    title = nil
+    manga["manga"].each { |value|
+      if value.has_value? "#{x}"
+	id = value["i"]
+	title = value["t"] 
+      end
+    }
+    
+    begin
+      mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
+      manga = MultiJson.load(mangainfo.body)
+      chapternumber=[]
+      manga["chapters"].each { |x|
+	chapternumber.push x[0]
+      }
+      chapterid = manga["chapters"].first[3]
+      latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid}")
+    end
+    
+    
+    #download if not up to date
+    uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
+    uptodate.each { |row|
+      sleep 5
+      i=0
+      chapternumber.each { |y|
 	
 	begin
-		mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
-		manga = MultiJson.load(mangainfo.body)
-		chapternumber=[]
-	    manga["chapters"].each { |x|
-			chapternumber.push x[0]
-		}
-		chapterid=[]
-		i=0
-		chapternumber.each { |x|
-			chapterid.push manga["chapters"][i][3]
-			i+=1
-		}
-		
-	end
-	chapternumber = chapternumber.sort
-	chapterid = chapterid.reverse
-
-	puts chapternumber.size
-	puts chapterid.size
-	puts chapternumber[221]
-	puts chapterid[221]
-
-	exit 0
-
-	#download if not up to date
-	i=0
-	  chapternumber.each { |y|
-	  
-		latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid[i]}")
-	    
-	    begin
-			Dir.mkdir "#{Dir.home}/.mdeden/manga/#{q}/#{title} #{chapternumber[i]}"
-			chapterinfo = MultiJson.load(latestchapter.body)
-			chapterinfo["images"].reverse.each { |image|
-				imagenumber = sprintf '%02d', image[0]
-			  	File.open( "#{Dir.home}/.mdeden/manga/#{q}/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
-				i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-				end
-			}
-	    rescue
-	      nil
-	    end
-			cn = chapternumber[i]
-			packagemanga(id,title,cn)
-			i+=1
+	  #if it hasn't been downloaded before, get latest chapter and start from there
+	  if row[2].nil?
+	    Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
+	    chapterinfo = MultiJson.load(latestchapter.body)
+	    chapterinfo["images"].reverse.each { |image|
+	      imagenumber = sprintf '%02d', image[0]
+	      File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
+		i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+	      end
 	    }
+	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
+	    cn = chapternumber[i]
+	    packagemanga(id,title,cn)
+	    i+=1
+	    break
+	  #if recorded chapter is greater than or equal to the latest chapter number, don't do anything
+	  elsif row[2] >= chapternumber[i] or row[2] == chapternumber[i]
+	    
+	    puts "#{title} up to date"
+	    break	
+	  #if behind download latest chapters
+	  else
+	    Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
+	    chapterinfo = MultiJson.load(latestchapter.body)
+	    chapterinfo["images"].reverse.each { |image|
+	      imagenumber = sprintf '%02d', image[0]
+	      File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
+		i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+	      end
+	    }
+	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
+	    cn = chapternumber[i]
+	    packagemanga(id,title,cn)
+	    i+=1
+	  end
+	rescue
+	  if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
+	    Fileutils.rm_r "#{Dirhome}/.mdeden/manga/#{title} #{chapternumber[i]}/"
+	  else
+	    nil
+	  end
+	  retry
+	end
+      }
+    }
+  }
 end
 end
 
 def start
-puts `clear`
-choose { |menu|
-	menu.prompt = "Pick an option:"
-	
-	menu.choice("Refresh List") { refreshmanga }
-	menu.choice("Update Manga") { 
-		type = "update"
-		updatemanga(type)
-	}
-	#menu.choice("Get All Manga") {
-	#	type = "download"
-	#	updatemanga(type)
-	#}
-}
+  type = "update"
+  updatemanga(type)
 end
 
-intro
+intro if ARGV[0] == 'setup'
 start

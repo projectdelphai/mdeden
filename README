@@ -1,21 +1,31 @@
-	mdeden
+mdeden
+===========
 
-mdeden - Manga Downloader, Tracks manga released from MangaEden and downloads specific manga
-contact - projectdelphai at gmail dot com
+Description
+-------------
+mdeden is a manga downloader that uses the mangaeden api to track and download specified manga
+projectdelphai at gmail dot com
 
-Setup - 
+Setup 
+--------------
 1a. Place mdeden in folder and run "ruby mdeden" from terminal
 OR
 1b. Place mdeden in /usr/bin/ and run "mdeden" from terminal
 2. Setup of mdeden.yml
+* for first time run "mdeden setup"
 * config file is located in /home/<user>/.mdeden/mdeden.yml
 * Specify which directory downloaded manga should be placed in
-* Look up EXACT name of manga on MangaEden.com
+* Look up EXACT name of manga on mangaeden.com
 * Specify which manga to download in mdeden.yml
 * Any manga with "-" or ":" in the title should be enclosed in quotes
 3. Run mdeden every week or so usually on a wednesday or thursday and get any newly released manga
 
 Thanks to MangaEden for their great manga and for releasing an API which made this project much easier.
+
+0.0.3
+added comand-line setup
+removed download comics function
+cleaned up some stuff and added some comments
 
 0.0.2
 added multi-chapter updating

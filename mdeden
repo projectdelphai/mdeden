@@ -13,10 +13,10 @@ def intro
 	:manga => ["Bleach", "Fairy Tail", "Annarasumanara"]	
 }
 #check if .mdeden folder exists, if manga folder exists, and if yml file exists (which if it doesn't, creates it and populates it with default values)
-@yml = File.join(ENV['HOME'],'/.mdeden/mdeden.yml')
 Dir.mkdir("#{Dir.home}/.mdeden/", 0700) unless File.directory?("#{Dir.home}/.mdeden/")
 Dir.mkdir("#{Dir.home}/.mdeden/manga", 0700) unless File.directory?("#{Dir.home}/.mdeden/manga/") == false
 
+@yml = File.join(ENV['HOME'],'/.mdeden/mdeden.yml')
 if File.exists? "#{Dir.home}/.mdeden/mdeden.yml"
   config_options = YAML::load_file(@yml)
   @options.merge!(config_options)
@@ -73,7 +73,6 @@ if type == "update"
       latestchapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapterid}")
     end
     
-    
     #download if not up to date
     uptodate = db.execute "SELECT * FROM manga WHERE Name LIKE '%#{z}%'"
     uptodate.each { |row|
@@ -99,22 +98,27 @@ if type == "update"
 	    break
 	  #if recorded chapter is greater than or equal to the latest chapter number, don't do anything
 	  elsif row[2] >= chapternumber[i] or row[2] == chapternumber[i]
-	    
 	    puts "#{title} up to date"
 	    break	
 	  #if behind download latest chapters
 	  else
-	    Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
-	    chapterinfo = MultiJson.load(latestchapter.body)
-	    chapterinfo["images"].reverse.each { |image|
-	      imagenumber = sprintf '%02d', image[0]
-	      File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
-		i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-	      end
-	    }
+	    y=i
+	    until row[2].to_i == chapternumber[y-1].to_i
+	      puts chapternumber[y]
+  	      Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}"
+  	      chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{manga["chapters"][y][3]}")
+  	      chapterinfo = MultiJson.load(chapter.body)
+  	      chapterinfo["images"].reverse.each { |image|
+  		imagenumber = sprintf '%02d', image[0]
+  		File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}/#{title}.#{chapternumber[y]}.#{imagenumber}.jpg", "w") do |i|
+  		  i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+  		end
+  	      }
+  	      cn = chapternumber[y]
+  	      packagemanga(id,title,cn)
+	      y+=1
+	    end
 	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
-	    cn = chapternumber[i]
-	    packagemanga(id,title,cn)
 	    i+=1
 	  end
 	rescue
@@ -137,4 +141,5 @@ def start
 end
 
 intro if ARGV[0] == 'setup'
+@options = YAML::load_file(File.join(ENV['HOME'],'.mdeden/mdeden.yml'))
 start

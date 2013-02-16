@@ -26,6 +26,7 @@ Thanks to MangaEden for their great manga and for releasing an API which made th
 added comand-line setup
 removed download comics function
 cleaned up some stuff and added some comments
+completed recursive updating
 
 0.0.2
 added multi-chapter updating

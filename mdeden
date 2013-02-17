@@ -106,7 +106,7 @@ if type == "update"
 	  #if behind download latest chapters
 	  else
 	    y=i
-	    until row[2].to_i == chapternumber[y-1].to_i
+	    until row[2].to_i == chapternumber[y].to_i
   	      Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}"
   	      chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{manga["chapters"][y][3]}")
   	      chapterinfo = MultiJson.load(chapter.body)

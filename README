@@ -27,6 +27,7 @@ added comand-line setup
 removed download comics function
 cleaned up some stuff and added some comments
 completed recursive updating
+added multithreading for image download to speed up comic creation. 
 
 0.0.2
 added multi-chapter updating

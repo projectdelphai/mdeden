@@ -79,18 +79,21 @@ if type == "update"
       sleep 5
       i=0
       chapternumber.each { |y|
-	
 	begin
 	  #if it hasn't been downloaded before, get latest chapter and start from there
 	  if row[2].nil?
 	    Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
 	    chapterinfo = MultiJson.load(latestchapter.body)
+	    threadset2=[]
 	    chapterinfo["images"].reverse.each { |image|
-	      imagenumber = sprintf '%02d', image[0]
-	      File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
-		i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-	      end
+	      threadset2 << Thread.new(image) { |image|
+  		imagenumber = sprintf '%02d', image[0]
+  		File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/#{title}.#{chapternumber[i]}.#{imagenumber}.jpg", "w") do |i|
+  		  i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+  		end
+	      }
 	    }
+	    threadset2.each { |thread| thread.join }
 	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 	    cn = chapternumber[i]
 	    packagemanga(id,title,cn)
@@ -104,22 +107,26 @@ if type == "update"
 	  else
 	    y=i
 	    until row[2].to_i == chapternumber[y-1].to_i
-	      puts chapternumber[y]
   	      Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}"
   	      chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{manga["chapters"][y][3]}")
   	      chapterinfo = MultiJson.load(chapter.body)
+	      threadset3=[]
   	      chapterinfo["images"].reverse.each { |image|
-  		imagenumber = sprintf '%02d', image[0]
-  		File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}/#{title}.#{chapternumber[y]}.#{imagenumber}.jpg", "w") do |i|
-  		  i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-  		end
+		threadset3 << Thread.new(image) { |image|
+  		  imagenumber = sprintf '%02d', image[0]
+  		  File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}/#{title}.#{chapternumber[y]}.#{imagenumber}.jpg", "w") do |i|
+  		    i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+  		  end
+		}
   	      }
+	      threadset3.each { |thread| thread.join }
   	      cn = chapternumber[y]
   	      packagemanga(id,title,cn)
 	      y+=1
 	    end
 	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 	    i+=1
+	    break
 	  end
 	rescue
 	  if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
@@ -127,7 +134,6 @@ if type == "update"
 	  else
 	    nil
 	  end
-	  retry
 	end
       }
     }

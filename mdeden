@@ -130,7 +130,7 @@ if type == "update"
 	  end
 	rescue
 	  if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
-	    FileUtils.rm_dir "#{Dirhome}/.mdeden/manga/#{title} #{chapternumber[i]}/"
+	    FileUtils.rm_dir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/"
 	  else
 	    nil
 	  end

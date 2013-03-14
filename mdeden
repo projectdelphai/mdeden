@@ -132,7 +132,8 @@ if type == "update"
 	      cn = chapternumber2[y]
 	      packagemanga(id,title,cn)
 	      db.execute "UPDATE manga SET Chapter=#{chapternumber2[y]} WHERE Name LIKE '%#{z}%'"
-	      puts `#{options[:command]}` unless options[:command] == nil
+	      @options[:command] = @options[:command].gsub("title", "#{title} #{chapternumber2[y]}")
+	      puts `#{@options[:command]}` unless @options[:command] == nil
 	      y+=1
 	    end
 	    i+=1

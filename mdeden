@@ -10,7 +10,8 @@ require 'multi_json'
 def intro
 @options = {
 	:downloaddir => File.join(ENV['HOME'],'/.mdeden/manga'),
-	:manga => ["Bleach", "Fairy Tail", "Annarasumanara"]	
+	:manga => ["Bleach", "Fairy Tail", "Annarasumanara"],
+	:command => nil
 }
 #check if .mdeden folder exists, if manga folder exists, and if yml file exists (which if it doesn't, creates it and populates it with default values)
 Dir.mkdir("#{Dir.home}/.mdeden/", 0700) unless File.directory?("#{Dir.home}/.mdeden/")
@@ -131,6 +132,7 @@ if type == "update"
 	      cn = chapternumber2[y]
 	      packagemanga(id,title,cn)
 	      db.execute "UPDATE manga SET Chapter=#{chapternumber2[y]} WHERE Name LIKE '%#{z}%'"
+	      puts `#{options[:command]}` unless options[:command] == nil
 	      y+=1
 	    end
 	    i+=1

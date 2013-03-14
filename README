@@ -19,6 +19,7 @@ OR
 * Specify which manga to download in mdeden.yml
 * Any manga with "-" or ":" in the title should be enclosed in quotes
 3. Run mdeden every week or so usually on a wednesday or thursday and get any newly released manga
+4. The command configuration can be filled out with a bash command which will run after every comic is downloaded. This is good to display or remove notifications
 
 Thanks to MangaEden for their great manga and for releasing an API which made this project much easier.
 
@@ -28,6 +29,7 @@ Versions
 reversed updating order for easier multiple chapter downloads; now at failure, it can start where it stopped
 added timeout catching
 fixed bug for manga that had .5 issues
+added external command for after each comic download
 
 0.0.3
 added comand-line setup

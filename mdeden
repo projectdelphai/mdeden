@@ -78,7 +78,7 @@ if type == "update"
     uptodate.each { |row|
       sleep 5
       i=0
-      chapternumber.each { |y|
+      chapternumber.each { |n|
 	begin
 	  #if it hasn't been downloaded before, get latest chapter and start from there
 	  if row[2].nil?
@@ -105,34 +105,36 @@ if type == "update"
 	    break	
 	  #if behind download latest chapters
 	  else
-	    y=i
-	    until row[2].to_i == chapternumber[y].to_i
-  	      Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}"
-  	      chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{manga["chapters"][y][3]}")
-  	      chapterinfo = MultiJson.load(chapter.body)
-	      threadset3=[]
-  	      chapterinfo["images"].reverse.each { |image|
-		threadset3 << Thread.new(image) { |image|
-  		  imagenumber = sprintf '%02d', image[0]
-  		  File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[y]}/#{title}.#{chapternumber[y]}.#{imagenumber}.jpg", "w") do |i|
-  		    i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
-  		  end
-		}
-  	      }
-	      threadset3.each { |thread| thread.join }
-  	      cn = chapternumber[y]
-  	      packagemanga(id,title,cn)
+	    chapternumber2 = chapternumber.reverse
+	    chapters = manga["chapters"].reverse
+	    y = chapternumber2.index(row[2])
+	    until chapternumber2[y] == nil
+	      begin
+  		Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}" unless File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}") == true
+  		chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapters[y][3]}")
+  		chapterinfo = MultiJson.load(chapter.body)
+  		threadset3=[]
+  		chapterinfo["images"].reverse.each { |image|
+  		  threadset3 << Thread.new(image) { |image|
+  		    imagenumber = sprintf '%02d', image[0]
+  		    File.open( "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}/#{title}.#{chapternumber2[y]}.#{imagenumber}.jpg", "w") do |i|
+  		      i << HTTParty.get( "http://cdn.mangaeden.com/mangasimg/#{image[1]}" )
+  		    end
+  		  }
+  		}
+  		threadset3.each { |thread| thread.join }
+	      rescue
+		FileUtils.rm_r "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}"
+		puts "Retrying due to timeout. . ."
+		retry
+	      end
+	      cn = chapternumber2[y]
+	      packagemanga(id,title,cn)
+	      db.execute "UPDATE manga SET Chapter=#{chapternumber2[y]} WHERE Name LIKE '%#{z}%'"
 	      y+=1
 	    end
-	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 	    i+=1
 	    break
-	  end
-	rescue
-	  if File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/") == true
-	    FileUtils.rm_dir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}/"
-	  else
-	    nil
 	  end
 	end
       }

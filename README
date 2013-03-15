@@ -30,6 +30,7 @@ reversed updating order for easier multiple chapter downloads; now at failure, i
 added timeout catching
 fixed bug for manga that had .5 issues
 added external command for after each comic download
+fixed repeated downloading of previous chapter
 
 0.0.3
 added comand-line setup

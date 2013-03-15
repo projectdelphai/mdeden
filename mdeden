@@ -108,7 +108,7 @@ if type == "update"
 	  else
 	    chapternumber2 = chapternumber.reverse
 	    chapters = manga["chapters"].reverse
-	    y = chapternumber2.index(row[2])
+	    y = chapternumber2.index(row[2]+1)
 	    until chapternumber2[y] == nil
 	      begin
   		Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}" unless File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}") == true

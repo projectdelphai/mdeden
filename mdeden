@@ -1,11 +1,10 @@
 #! /usr/bin/ruby
 
-require 'highline/import'
 require 'yaml'
 require 'fileutils'
 require 'sqlite3'
 require 'httparty'
-require 'multi_json'
+require 'json'
 
 def intro
 @options = {
@@ -31,15 +30,16 @@ response = HTTParty.get("http://www.mangaeden.com/api/list/0")
 File.open("#{Dir.home}/.mdeden/mangalist.txt", 'w') {|f| f.write(response.body) }
 end
 
-def packagemanga(id,title,cn)
-#packages folder of files and removes old folder
-begin
-	puts `rar a -ep "#{@options[:'downloaddir']}/#{title} #{cn}.cbr" "#{Dir.home}/.mdeden/manga/#{title} #{cn}/*" 1> /dev/null `
-	FileUtils.rm_r "#{Dir.home}/.mdeden/manga/#{title} #{cn}"
-	puts "Created comic #{title} #{cn}"
-rescue
-puts "Failed to create comic #{title}"
-end
+# cn = chapter number
+def packagemanga(title,cn)
+  #packages folder of files and removes old folder
+  begin
+    puts `rar a -ep "#{@options[:'downloaddir']}/#{title} #{cn}.cbr" "#{Dir.home}/.mdeden/manga/#{title} #{cn}/*" 1> /dev/null `
+    FileUtils.rm_r "#{Dir.home}/.mdeden/manga/#{title} #{cn}"
+    puts "Created comic #{title} #{cn}"
+  rescue
+    puts "Failed to create comic #{title}"
+  end
 end
 
 def updatemanga(type)
@@ -53,7 +53,7 @@ if type == "update"
     db.execute "INSERT INTO manga(Name) Values('#{z}')" if manga.size == 0 or manga.size == nil
     
     #get latest chapter info
-    manga = MultiJson.load(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
+    manga = JSON.parse(File.read("#{Dir.home}/.mdeden/mangalist.txt"))
     id = nil
     title = nil
     manga["manga"].each { |value|
@@ -65,7 +65,7 @@ if type == "update"
     
     begin
       mangainfo = HTTParty.get("http://www.mangaeden.com/api/manga/#{id}")
-      manga = MultiJson.load(mangainfo.body)
+      manga = JSON.parse(mangainfo.body)
       chapternumber=[]
       manga["chapters"].each { |x|
 	chapternumber.push x[0]
@@ -84,7 +84,7 @@ if type == "update"
 	  #if it hasn't been downloaded before, get latest chapter and start from there
 	  if row[2].nil?
 	    Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber[i]}"
-	    chapterinfo = MultiJson.load(latestchapter.body)
+	    chapterinfo = JSON.parse(latestchapter.body)
 	    threadset2=[]
 	    chapterinfo["images"].reverse.each { |image|
 	      threadset2 << Thread.new(image) { |image|
@@ -97,7 +97,7 @@ if type == "update"
 	    threadset2.each { |thread| thread.join }
 	    db.execute "UPDATE manga SET Chapter=#{chapternumber[i]} WHERE Name LIKE '%#{z}%'"
 	    cn = chapternumber[i]
-	    packagemanga(id,title,cn)
+	    packagemanga(title,cn)
 	    i+=1
 	    break
 	  #if recorded chapter is greater than or equal to the latest chapter number, don't do anything
@@ -113,7 +113,7 @@ if type == "update"
 	      begin
   		Dir.mkdir "#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}" unless File.directory?("#{Dir.home}/.mdeden/manga/#{title} #{chapternumber2[y]}") == true
   		chapter = HTTParty.get("http://www.mangaeden.com/api/chapter/#{chapters[y][3]}")
-  		chapterinfo = MultiJson.load(chapter.body)
+  		chapterinfo = JSON.parse(chapter.body)
   		threadset3=[]
   		chapterinfo["images"].reverse.each { |image|
   		  threadset3 << Thread.new(image) { |image|
@@ -130,7 +130,7 @@ if type == "update"
 		retry
 	      end
 	      cn = chapternumber2[y]
-	      packagemanga(id,title,cn)
+	      packagemanga(title,cn)
 	      db.execute "UPDATE manga SET Chapter=#{chapternumber2[y]} WHERE Name LIKE '%#{z}%'"
 	      @options[:command] = @options[:command].gsub("title", "#{title} #{chapternumber2[y]}") unless @options[:command] == nil
 	      puts `#{@options[:command]}` unless @options[:command] == nil

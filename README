@@ -8,6 +8,11 @@ projectdelphai at gmail dot com
 
 Setup 
 --------------
+
+###Dependencies
+ruby gems: sqlite3, httparty
+applications: sqlite3
+
 1a. Place mdeden in folder and run "ruby mdeden" from terminal
 OR
 1b. Place mdeden in /usr/bin/ and run "mdeden" from terminal
@@ -23,6 +28,11 @@ OR
 
 Thanks to MangaEden for their great manga and for releasing an API which made this project much easier.
 
+Todo
+------------
+0.0.5 will mainly be about optimizing and cleaning up a lot of the codebase. So far there hasn't been a lot of bugs and so I'm going to start working on making it work a little faster, removing unnecessary functions, some error-catching, and removing any unnecessary dependencies. It will probably include the ability to set the chapter of a manga and interactive actions with the database. Here will appear the command line functions.
+
+A gem is slowly coming out that deals with a lot of what I've learned by making this program. It's already up, but work won't fully start until after 0.0.5
 Versions
 -------------
 0.0.4
